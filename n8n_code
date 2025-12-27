@@ -1,0 +1,184 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "61b5b6be-09d9-480f-9576-8645ec3cf2bd",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "url": "https://694c73a5da5ddabf0036c733.mockapi.io/tickets",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        208,
+        0
+      ],
+      "id": "4696601f-01fb-42b2-9c2a-0f77ff43e0ac",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "language": "pythonNative",
+        "pythonCode": "def iso_week_from_date(date_str):\n    y = int(date_str[0:4])\n    m = int(date_str[5:7])\n    d = int(date_str[8:10])\n\n    # Algoritmo ISO-8601 simplificado\n    a = (14 - m) // 12\n    y_ = y + 4800 - a\n    m_ = m + 12*a - 3\n\n    julian_day = d + ((153*m_ + 2)//5) + 365*y_ + y_//4 - y_//100 + y_//400 - 32045\n    d4 = (julian_day + 31741 - (julian_day % 7)) % 146097 % 36524 % 1461\n    week = d4 // 7 + 1\n\n    return week\n\nfor item in _items:\n  item[\"json\"][\"week\"] = iso_week_from_date(item[\"json\"][\"create\"])\nreturn _items"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "9798baab-42dd-42ec-be4e-7e8c10d74683",
+      "name": "Code in Python (Native)"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "622955a3-0312-4892-8db9-ceffa33ec9b5",
+              "leftValue": "={{ $json.week }}",
+              "rightValue": 6,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        624,
+        0
+      ],
+      "id": "6299c637-39fb-4172-9e13-36ad2670cc02",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "language": "pythonNative",
+        "pythonCode": "groups = {}\n\nfor item in _items:\n    json = item[\"json\"]\n\n    category = json.get(\"category\", \"N/A\")\n    request_type = json.get(\"request_type\", \"N/A\")\n\n    key = category + \"||\" + request_type\n\n    if key not in groups:\n        groups[key] = {\n            \"category\": category,\n            \"request_type\": request_type,\n            \"count\": 0\n        }\n\n    groups[key][\"count\"] += 1\n\n\nhtml = \"\"\"\n<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"\n    style=\"border-collapse:collapse; font-family:Arial, Helvetica, sans-serif; font-size:14px; color:#333333;\">\n  <thead>\n    <tr>\n      <th style=\"background-color:#f0f0f0; padding:10px; border:1px solid #dddddd; text-align:left;\">Categoria</th>\n      <th style=\"background-color:#f0f0f0; padding:10px; border:1px solid #dddddd; text-align:left;\">Request Type</th>\n      <th style=\"background-color:#f0f0f0; padding:10px; border:1px solid #dddddd; text-align:left;\">Cantidad</th>\n    </tr>\n  </thead>\n  <tbody>\n\"\"\"\n\nfor g in groups.values():\n    html += f\"\"\"\n    <tr style=\"background-color:#ffffff;\">\n      <td style=\"padding:8px; border:1px solid #dddddd;\">{g['category']}</td>\n      <td style=\"padding:8px; border:1px solid #dddddd;\">{g['request_type']}</td>\n      <td style=\"padding:8px; border:1px solid #dddddd; text-align:center;\">{g['count']}</td>\n    </tr>\n    \"\"\"\n\nhtml += \"\"\"\n  </tbody>\n</table>\n\"\"\"\n\nreturn [{\n    \"json\": {\n        \"html_table\": html\n    }\n}]\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        0
+      ],
+      "id": "f3d61ec9-5765-4b3c-8f36-3a8537ba3d31",
+      "name": "Code in Python (Native)1"
+    },
+    {
+      "parameters": {
+        "sendTo": "anabmiranda1184@gmail.com",
+        "subject": "Desde n8n",
+        "message": "=<!DOCTYPE html>\n<html lang=\"es\">\n<head>\n  <meta charset=\"UTF-8\">\n  <title>Notificación</title>\n</head>\n\n<body style=\"margin:0; padding:0; background-color:#f2f2f2; font-family:Arial, Helvetica, sans-serif;\">\n\n  <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color:#f2f2f2; padding:30px 0;\">\n    <tr>\n      <td align=\"center\">\n\n        <!-- Card -->\n        <table width=\"600\" cellpadding=\"0\" cellspacing=\"0\"\n               style=\"background-color:#ffffff; border-radius:8px; padding:24px;\">\n\n          <!-- Header -->\n          <tr>\n            <td style=\"padding-bottom:16px; border-bottom:1px solid #e5e5e5;\">\n              <h2 style=\"margin:0; color:#333333; font-size:20px;\">\n                Notificación de Tickets\n              </h2>\n            </td>\n          </tr>\n\n          <!-- Intro / Explanation -->\n          <tr>\n            <td style=\"padding-top:16px; padding-bottom:16px; color:#555555; font-size:14px; line-height:1.6;\">\n\n              <h3 style=\"margin:0 0 8px 0; font-size:16px; color:#333333;\">\n                📊 Descripción del análisis\n              </h3>\n\n              <p style=\"margin:0 0 12px 0;\">\n                El presente análisis se realizó a partir del relevamiento de los tickets ingresados durante el período evaluado,\n                agrupándolos por <strong>categoría</strong> y <strong>tipo de solicitud</strong>, con el objetivo de identificar\n                aquellos casos con mayor volumen de ingresos.\n              </p>\n\n              <p style=\"margin:0 0 12px 0;\">\n                La finalidad de este cálculo es detectar los principales focos de demanda y priorizar acciones que permitan\n                reducir el número de tickets entrantes.\n              </p>\n\n              <!-- Highlight box -->\n              <div style=\"background-color:#f7f7f7; border-left:4px solid #cccccc; padding:12px; margin-top:8px;\">\n                <p style=\"margin:0; font-size:13px; color:#444444;\">\n                  Estas acciones incluyen la <strong>implementación de automatizaciones</strong>, la\n                  <strong>optimización de procesos</strong> y la <strong>puesta en común con los equipos de Nivel 3 (L3)</strong>\n                  para revisar causas raíz y posibles mejoras.\n                </p>\n              </div>\n\n              <p style=\"margin:12px 0 0 0;\">\n                Este enfoque busca mejorar la eficiencia operativa, disminuir la carga de soporte y garantizar\n                una mejor experiencia para los usuarios finales.\n              </p>\n\n            </td>\n          </tr>\n\n          <!-- Table -->\n          {{ $json.html_table }}\n\n          <!-- Footer -->\n          <tr>\n            <td style=\"padding-top:20px; border-top:1px solid #e5e5e5; color:#999999; font-size:12px;\">\n              <p style=\"margin:0;\">\n                Este es un mensaje automático. Por favor no responder.\n              </p>\n            </td>\n          </tr>\n\n        </table>\n        <!-- End Card -->\n\n      </td>\n    </tr>\n  </table>\n\n</body>\n</html>\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1040,
+        0
+      ],
+      "id": "030b4178-8019-4e26-af70-e7dfc5831028",
+      "name": "Send a message",
+      "webhookId": "39799ce1-8195-4daf-b7b5-6fa8cd93af2f",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "1cvqQxnGehDCDSVF",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in Python (Native)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in Python (Native)": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Code in Python (Native)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in Python (Native)1": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "80b84434-ed63-44d5-8ee3-c17c370e1b8c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e1e94b196a710aee8a27383b3ca79977a788ab5ff725469e5d4d1b210f92c7ba"
+  },
+  "id": "43h1xyeOjDSnzEgl",
+  "tags": []
+}
